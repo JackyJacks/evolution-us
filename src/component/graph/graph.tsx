@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { LineChart } from '@mui/x-charts';
 import { Slider, Box } from '@mui/material';
 import { fetchPopulationData } from '../../services/api';
+import { PopulationData } from '../../types/PopulationData';
 
 
 const historyLengths: number[] = [3, 5, 10];
@@ -14,33 +15,39 @@ const marks = historyLengths.map(length => ({
 }));
 
 const PopulationGraph: React.FC = () => {
-    const [years, setYears] = useState<number>(maxHistoryLength);
     const [yearsLabels, setYearsLabels] = useState<number[]>([]);
     const [dataValues, setDataValues] = useState<number[]>([]);
+    const [populationData, setpopulationData] = useState<PopulationData[]>([]);
 
     useEffect(() => {
-        loadPopulationData(years);
-    }, [years]);
+        loadPopulationData();
+    }, []);
 
-    const loadPopulationData = async (yearLength: number) => {
+    const loadPopulationData = async () => {
         try {
-            const data = await fetchPopulationData()
+            const data = await fetchPopulationData();
 
-            const filteredData = data.sort((a, b) => b.Year - a.Year).slice(0, yearLength);
+            setpopulationData(data.sort((a, b) => b.Year - a.Year));
 
-            const years = filteredData.map(item => item.Year);
-            const populations = filteredData.map(item => item.Population);
-
-            setYearsLabels(years);
-            setDataValues(populations);
+            updateGraphData(maxHistoryLength, data);
         } catch (error) {
             console.error("Failed to load data:");
         }
     };
 
+    const updateGraphData = (yearLength: number, data: PopulationData[]) => {
+        const slicedData = data.slice(0, yearLength);
+
+        const years = slicedData.map(item => item.Year);
+        const populations = slicedData.map(item => item.Population);
+
+        setYearsLabels(years);
+        setDataValues(populations);
+    };
+
     const handleChange = (event: Event, newValue: number | number[]) => {
         if (typeof newValue === 'number') {
-            setYears(newValue);
+            updateGraphData(newValue, populationData);
         }
     };
 
