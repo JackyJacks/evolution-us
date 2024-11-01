@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import { LineChart } from '@mui/x-charts';
 import { Slider, Box } from '@mui/material';
+import { fetchPopulationData } from '../../services/api';
 
-interface PopulationData {
-    Year: number;
-    Population: number;
-}
 
 const historyLengths: number[] = [3, 5, 10];
+const minHistoryLength: number = Math.min(...historyLengths)
+const maxHistoryLength: number = Math.max(...historyLengths)
 
 const marks = historyLengths.map(length => ({
     value: length,
@@ -16,20 +14,18 @@ const marks = historyLengths.map(length => ({
 }));
 
 const PopulationGraph: React.FC = () => {
-    const [years, setYears] = useState<number>(10);
+    const [years, setYears] = useState<number>(maxHistoryLength);
     const [yearsLabels, setYearsLabels] = useState<number[]>([]);
     const [dataValues, setDataValues] = useState<number[]>([]);
 
     useEffect(() => {
-        fetchPopulationData(years);
+        loadPopulationData(years);
     }, [years]);
 
-    const fetchPopulationData = async (yearLength: number) => {
+    const loadPopulationData = async (yearLength: number) => {
         try {
-            const response = await axios.get('https://datausa.io/api/data?drilldowns=Nation&measures=Population');
-            const data: PopulationData[] = response.data.data;
+            const data = await fetchPopulationData()
 
-            // havent found the way to do it by API so made it manualy)
             const filteredData = data.sort((a, b) => b.Year - a.Year).slice(0, yearLength);
 
             const years = filteredData.map(item => item.Year);
@@ -38,7 +34,7 @@ const PopulationGraph: React.FC = () => {
             setYearsLabels(years);
             setDataValues(populations);
         } catch (error) {
-            console.error("Error fetching data:", error);
+            console.error("Failed to load data:");
         }
     };
 
@@ -49,31 +45,22 @@ const PopulationGraph: React.FC = () => {
     };
 
     return (
-        <div>
-            <Box 
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                minHeight="100vh"
-            >
-                <Box sx={{ width: 600 }}>
-                    <Slider
-                        step={null}
-                        marks={marks}
-                        max={Math.max(...historyLengths)}
-                        min={Math.min(...historyLengths)}
-                        onChange={handleChange}
-                    />
-                    <LineChart
-                        height={300}
-                        viewBox={{height: 400}}
-                        series={[{ data: dataValues}]}
-                        xAxis={[{ data: yearsLabels, scaleType: 'band' }]}
-                    />
-                </Box>
-            </Box>
-            
-        </div>
+        <Box sx={{ width: 600 }}>
+            <Slider
+                step={null}
+                marks={marks}
+                max={maxHistoryLength}
+                min={minHistoryLength}
+                defaultValue={maxHistoryLength}
+                onChange={handleChange}
+            />
+            <LineChart
+                height={300}
+                viewBox={{height: 400}}
+                series={[{ data: dataValues}]}
+                xAxis={[{ data: yearsLabels, scaleType: 'band' }]}
+            />
+        </Box>
     );
 };
 
